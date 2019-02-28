@@ -1,0 +1,47 @@
+body {
+	--input-field-margin-bottom: 20px;
+	--input-field-margin-top: 20px;
+	--error-red: #e74c3c;
+	font-family: sans-serif;
+	.brand-logo {
+		font-size: 20px;
+		padding-left: 20px;
+	}
+
+	.flex {
+		display: flex;
+		align-items: center;
+	}
+	.block {
+		display: block;
+	}
+	.select-box {
+		min-width: 200px;
+	}
+	#invoice {
+		display: flex;
+		width: 40vw;
+		margin: 70px auto;
+		flex-direction: column;
+		.invoices-list {
+		}
+	}
+	.editableComponent {
+		i.material-icons {
+			cursor: pointer;
+			margin-left: 8px;
+			font-size: 14px;
+		}
+	}
+	#generator {
+		width: 80vw;
+		margin: 70px auto;
+		padding: 20px;
+		> span {
+			margin: 10px 0;
+		}
+	}
+	#formValues {
+		@extend #generator;
+	}
+}
