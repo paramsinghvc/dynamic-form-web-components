@@ -1,7 +1,7 @@
 {
 	"name": "dynamic-form",
 	"version": "1.0.0",
-	"description": "",
+	"description": "An example of creating Config Driven UI by using Custom Components using the web apis and vanilla JS. ",
 	"main": "index.html",
 	"scripts": {
 		"start": "parcel index.html --open",
@@ -16,5 +16,24 @@
 		"parcel-bundler": "^1.11.0",
 		"sass": "^1.17.2"
 	},
-	"keywords": []
+	"keywords": [
+		"web",
+		"components",
+		"javascript",
+		"custom",
+		"elements",
+		"html",
+		"config",
+		"driven",
+		"development",
+		"reactive",
+		"react",
+		"angular",
+		"vue",
+		"vanilla",
+		"dynamic",
+		"form",
+		"configuration",
+		"based"
+	]
 }
