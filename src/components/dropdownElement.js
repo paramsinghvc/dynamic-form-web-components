@@ -41,9 +41,10 @@ export default class DropdownElement extends CustomElement {
 	}
 	connectedCallback() {
 		super.connectedCallback();
-		this.selectEl.addEventListener("change", e => {
+		this.changeEventListener = e => {
 			this.value = e.target.value;
-		});
+		};
+		this.selectEl.addEventListener("change", this.changeEventListener);
 	}
 
 	attributeChangedCallback(attrName, oldValue, newValue) {
@@ -51,11 +52,22 @@ export default class DropdownElement extends CustomElement {
 		const oldVal = this.getJSONParsedValue(oldValue);
 		if (shallowCompare(oldVal, val)) return;
 		switch (attrName) {
-			case "datasource": {
-				this.selectEl.innerHTML = val.map(ds => `<option>${ds}</option>`);
-			}
+			case "datasource":
+				{
+					// TODO: Take id field from the consumer and assign value field as optionValue[id] in case of non primitive optionValue value.
+					this.selectEl.innerHTML = val.map(
+						optionValue =>
+							`<option value="${optionValue}">${optionValue}</option>`
+					);
+					this.selectEl.value = this.value;
+				}
+				break;
 			case "value":
-				console.log("val", val);
+				this.selectEl.value = val;
 		}
+	}
+
+	disconnectedCallback() {
+		this.selectEl.removeEventListener("change", this.changeEventListener);
 	}
 }

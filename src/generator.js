@@ -2,108 +2,97 @@ import "./components";
 import validator from "./tools/validator";
 import eventHandlerBuilder from "./tools/eventBuilder";
 import { COMPONENTS_MAPPING } from "./config";
+import { createNode } from "./utils/domHelpers";
 
-const formElementsMap = {};
-
-export const createNode = (
-	nodeName,
-	{ classes = [], content = "", attrs = {}, children, events = {}, props = {} }
-) => {
-	const el = document.createElement(nodeName);
-	classes.forEach(c => el.classList.add(c));
-	for (let [key, value] of Object.entries(attrs)) {
-		el.setAttribute(key, value);
-	}
-	for (let [key, value] of Object.entries(props)) {
-		el[key] = value;
-	}
-	for (let [eventName, eventHandler] of Object.entries(events)) {
-		el.addEventListener(eventName, eventHandler);
-	}
-	if (content) {
-		el.appendChild(document.createTextNode(content));
-	}
-	if (children) {
-		if (Array.isArray(children)) {
-			const frag = document.createDocumentFragment();
-			children.forEach(c => frag.appendChild(c));
-			el.appendChild(frag);
-		} else {
-			el.appendChild(children);
-		}
+export default class Generator {
+	static createComponentGenerator(...args) {
+		return new Generator(...args);
 	}
 
-	return el;
-};
+	constructor(
+		componentsConfig,
+		containerEl,
+		formValues,
+		formValueChangeCallback
+	) {
+		this.formElementsMap = {};
+		this.formValidations = {};
+		const formValuesProxied = new Proxy(formValues, {
+			set(obj, prop, value) {
+				obj[prop] = value;
+				formValueChangeCallback();
+				return true;
+			}
+		});
+		this.createComponents(componentsConfig, containerEl, formValuesProxied);
+	}
 
-const formValidations = {};
-const renderComp = (compConfig, formValues) => {
-	const elementName = COMPONENTS_MAPPING[compConfig.type];
-	const events = {
-		change: e => {
-			formValues[compConfig.id] = e.detail;
-			if (compConfig.validations) {
-				const errors = validator(
-					compConfig.validations,
-					compConfig.id,
-					formValues
-				);
-				formValidations[compConfig.id] = errors;
-				console.log(formValidations);
-				formElementsMap[compConfig.id].validations = errors;
+	renderComp(compConfig, formValues) {
+		const elementName = COMPONENTS_MAPPING[compConfig.type];
+		const events = {
+			change: e => {
+				formValues[compConfig.id] = e.detail;
+				if (compConfig.validations) {
+					const errors = validator(
+						compConfig.validations,
+						compConfig.id,
+						formValues
+					);
+					this.formValidations[compConfig.id] = errors;
+					this.formElementsMap[compConfig.id].validations = errors;
+				}
+			}
+		};
+		if (compConfig.events) {
+			for (const [eventName, eventHandlers] of Object.entries(
+				compConfig.events
+			)) {
+				let existingHandler;
+				if (events[eventName]) {
+					existingHandler = events[eventName];
+				}
+
+				events[eventName] = e => {
+					existingHandler && existingHandler(e);
+					const evaulatedEventHandlers = eventHandlerBuilder(
+						eventHandlers,
+						formValues,
+						this.formElementsMap
+					);
+					Array.isArray(evaulatedEventHandlers)
+						? evaulatedEventHandlers.forEach(evaulatedEventHandler =>
+								evaulatedEventHandler(e.detail)
+						  )
+						: evaulatedEventHandlers(e.detail);
+				};
 			}
 		}
-	};
-	if (compConfig.events) {
-		for (const [eventName, eventHandlers] of Object.entries(
-			compConfig.events
-		)) {
-			let existingHandler;
-			if (events[eventName]) {
-				existingHandler = events[eventName];
-			}
+		const node = createNode(elementName, {
+			props: {
+				value: formValues[compConfig.id] || "",
+				datasource: compConfig.dataSource || [],
+				validations: this.formValidations[compConfig.id] || {}
+			},
+			attrs: {
+				placeholder: compConfig.text || "",
+				name: compConfig.id,
+				labelText: compConfig.text,
+				...compConfig.attrs
+			},
+			events,
+			children: (compConfig.children || []).map(childConfig =>
+				renderComp(childConfig, formValues)
+			)
+		});
 
-			events[eventName] = e => {
-				existingHandler && existingHandler(e);
-				const evaulatedEventHandlers = eventHandlerBuilder(
-					eventHandlers,
-					formValues,
-					formElementsMap
-				);
-				Array.isArray(evaulatedEventHandlers)
-					? evaulatedEventHandlers.forEach(evaulatedEventHandler =>
-							evaulatedEventHandler(e.detail)
-					  )
-					: evaulatedEventHandlers(e.detail);
-			};
+		this.formElementsMap[compConfig.id] = node;
+		return node;
+	}
+
+	createComponents(conf, containerEl, formValues) {
+		for (const compConfig of conf) {
+			const element = this.renderComp(compConfig, formValues);
+			!!element ? containerEl.appendChild(element) : void 0;
 		}
 	}
-	const node = createNode(elementName, {
-		props: {
-			value: formValues[compConfig.id] || "",
-			datasource: compConfig.dataSource || [],
-
-			validations: formValidations[compConfig.id] || {}
-		},
-		attrs: {
-			placeholder: compConfig.text || "",
-			name: compConfig.id,
-			labelText: compConfig.text,
-			...compConfig.attrs
-		},
-		events,
-		children: (compConfig.children || []).map(childConfig =>
-			renderComp(childConfig, formValues)
-		)
-	});
-
-	formElementsMap[compConfig.id] = node;
-	return node;
-};
-
-export const createComponents = (conf, containerEl, formValues) => {
-	for (const compConfig of conf) {
-		const element = renderComp(compConfig, formValues);
-		!!element ? containerEl.appendChild(element) : void 0;
-	}
-};
+}

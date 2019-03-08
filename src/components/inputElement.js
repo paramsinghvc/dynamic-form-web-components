@@ -1,6 +1,6 @@
 import CustomElement from "./customElement";
 import { shallowCompare, isNonEmptyObject } from "../utils";
-import { createNode } from "../generator";
+import { createNode } from "../utils/domHelpers";
 
 export default class InputElement extends CustomElement {
 	static get observedAttributes() {
@@ -63,9 +63,10 @@ export default class InputElement extends CustomElement {
 	connectedCallback() {
 		super.connectedCallback();
 		this.inputEl.value = this.value;
-		this.inputEl.addEventListener("input", e => {
+		this.inputEventListener = e => {
 			this.value = e.target.value;
-		});
+		};
+		this.inputEl.addEventListener("input", this.inputEventListener);
 	}
 
 	attributeChangedCallback(attrName, oldValue, newValue) {
@@ -109,5 +110,9 @@ export default class InputElement extends CustomElement {
 	setAttribute(name, value) {
 		super.setAttribute(name, value);
 		this.inputEl && this.inputEl.setAttribute(name, value);
+	}
+
+	disconnectedCallback() {
+		this.inputEl.removeEventListener("change", this.inputEventListener);
 	}
 }
